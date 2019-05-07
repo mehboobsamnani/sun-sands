@@ -144,14 +144,15 @@
                   <label for="color" class="mb-2 w-100 justify-content-start">color</label>
                   <select v-model="color" id="color" class="form-control">
                     <option value="" disabled selected>Select Color</option>
-                    <option :key="index" :value="color.color" :disabled="!color.enable" v-for="(color,index) in colors">{{color.color}}</option>
+                    <option :key="index" :value="color" :disabled = color.disabled   v-for="(color,index) in availableColors">{{color.color}}</option>
                   </select>
                 </div>
                 <div class="form-group">
+ 
                   <label for="size" class="mb-2 w-100 justify-content-start">size</label>
                   <select required v-model="size" id="size" class="form-control">
                     <option value="" disabled selected>Select Size...</option>
-                    <option :key="index" :value="size.size" :disabled="!size.enable" v-for="(size,index) in sizes">{{size.size}}</option>
+                    <option :key="index" :value="size" :disabled = size.disabled  v-for="(size,index) in availableSizes">{{size.size}}</option>
                   </select>
                 </div>
                 <div class="form-group qty">
@@ -160,7 +161,10 @@
                 </div>
 
               </form>
-
+              <div class="d-flex  justify-content-between">
+                <button type="button" @click="reset" class=" btn  btn-link rounded-0">clear</button>
+               
+              </div>  
               <div class="d-flex mt-5 justify-content-between">
                 <button type="button" @click="addtoCart" :disabled="disabled" class=" btn btn-add-cart  rounded-0">Add To Cart</button>
                 <button type="button"  class="btn  btn-add-wish rounded-0  "> <i class="pr-1 far fa-heart"></i>Add to
@@ -191,16 +195,14 @@
   } from 'vue-awesome-swiper'
   export default {
     computed :{
-    
 
-      
       disabled(){
-     
         return this.color == '' || this.size == '' || this.quantity == ''
       },
+      
       availableStock(){
       
-       var self = this;
+      var self = this;
     
       var lookup = _.keyBy(this.cart, function(o) { return o.color + o.size });
 
@@ -220,8 +222,8 @@
         color:'',
         size:'',
         quantity:'',
-        sizes:[],
-        colors:[],
+        availableSizes:[],
+        availableColors:[],
         swatches,
         cart :JSON.parse(localStorage.getItem('cart')) || [],
         gallery: gallery.gallery,
@@ -246,21 +248,26 @@
       }
     },
     mounted() {
-      this.$nextTick(() => {
+      // this.$nextTick(() => {
        
-        const swiperTop = this.$refs.swiperTop.swiper
-        const swiperThumbs = this.$refs.swiperThumbs.swiper
-        swiperTop.controller.control = swiperThumbs
-        swiperThumbs.controller.control = swiperTop
-      })
+      //   const swiperTop = this.$refs.swiperTop.swiper
+      //   const swiperThumbs = this.$refs.swiperThumbs.swiper
+      //   swiperTop.controller.control = swiperThumbs
+      //   swiperThumbs.controller.control = swiperTop
+      // })
     },
     created(){
-          this.sizes =  _.map(_.uniqBy(this.availableStock ,'size'),(v)=>{ return {...v, ...{'enable':true}}});
-   
-          this.colors =  _.map(_.uniqBy(this.availableStock ,'color'),(v)=>{ return {...v, ...{'enable':true}}});
-  
+          this.availableSizes =  [{size: 'S' , disabled : false , qty : 1}
+                                  ,{size: 'M' , disabled : false , qty : 1}
+                                  ,{size: 'L' , disabled : false , qty : 1}
+                                  ,{size: 'XL' , disabled : false , qty : 1}]
+
+          this.availableColors = [{color: 'Red' , disabled : false , qty : 1}
+                                  ,{color: 'Green' ,  disabled : false , qty : 1}
+                                  ,{color: 'Blue' , disabled : false , qty : 1}]
     },  
     methods: {
+      
           getCount(attr,value){
             const arr = _.filter(this.availableStock,(i)=>{
               return i[attr] == value
@@ -268,37 +275,43 @@
             return arr.length;
           },
           addtoCart(){
-            var item = {
-              quantity : this.quantity,
-              color : this.color,
-              size :this.size
-            };
-
+            var item = _.find(this.swatches,{ 'color': this.color , 'size': this.size })
             this.cart.push(item)
             localStorage.setItem('cart',JSON.stringify(this.cart));
           },
           reset(){
+    
             this.quantity = this.color  = this.size = ''
+            _.forEach(this.availableColors,(i)=> {  i.disabled = false } )
+          
+            _.forEach(this.availableSizes,(i)=> {  i.disabled = false } )
+          
           }
 
     },
     watch: { 
       color(v){
-        self.selectedColor = v;
+        if(v){
+        var sizes = _.filter(this.swatches, { 'color': v.color  });
+        _.forEach(this.availableSizes,(i)=>{
         
-        const filteredSizes =  _.filter(this.availableStock,['color',self.selectedColor])
-        var filterColors = _.map(filteredSizes,'size');
-        var allColors = _.map(this.sizes,'size');
-
-        debugger;
-        this.sizes = sizes;
-     
+          let c = _.find(sizes,['size' , i.size])
+          
+          i.disabled =  c.qty == 0 ? true : false
+          
+        })
+        }
       },
       size(v){
-         self.selectedSize = v;
-        const color =  _.filter(this.availableStock,['size',self.selectedSize])
-        this.colors = color;
-     
+        if(v) {
+          var colors = _.filter(this.swatches, { 'size': v.size  });
+          _.forEach(this.availableColors,(i)=>{
+          
+            let s = _.find(colors,['color' , i.color])
+            i.disabled =  s.qty == 0 ? true : false
+          })
+        }
+        
       }
     }
   }
